@@ -13,7 +13,7 @@
             color: #333;
         }
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: auto;
             background: white;
             padding: 25px;
@@ -47,6 +47,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         /* Tabla de edición en la aplicación */
@@ -78,6 +80,14 @@
         }
         tr:hover { background-color: #f1f5f9; }
         
+        .input-text-table {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 12px;
+        }
         .input-cantidad {
             width: 60px;
             padding: 4px 6px;
@@ -102,6 +112,42 @@
         .btn-danger:hover { background-color: #dc2626; }
         .btn-success { background-color: #10b981; font-size: 14px; padding: 10px 20px;}
         .btn-success:hover { background-color: #059669; }
+        
+        .btn-warning { 
+            background-color: #f59e0b; 
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-warning:hover { background-color: #d97706; }
+        
+        .btn-mini-recuperar {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .btn-mini-recuperar:hover { background-color: #059669; }
+
+        /* Panel de la papelera */
+        .panel-eliminados {
+            background: #fffbeb;
+            border: 1px solid #fef3c7;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .panel-eliminados h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #b45309;
+            font-size: 14px;
+        }
 
         .particularidades-section {
             margin-top: 15px;
@@ -126,7 +172,6 @@
             font-size: 13px;
         }
 
-        /* Notificación flotante */
         .toast {
             position: fixed;
             bottom: 20px;
@@ -138,10 +183,8 @@
             font-weight: 500;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: none;
-            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
             z-index: 1000;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -149,23 +192,47 @@
 <div class="toast" id="toast">¡Copiado con éxito! Ya podés pegarlo en tu mail.</div>
 
 <div class="container">
-    <h2>Asistente de Envío a Back Office (Filtro VA05)</h2>
+    <h2>Asistente de Envío a Back Office (Filtro VA05 + QM)</h2>
     
     <div id="dropZone" class="drop-zone">
         Arrastrá acá el reporte Excel de la VA05 o hacé clic para buscarlo.
         <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display:none">
     </div>
 
+    <div id="panelEliminados" class="panel-eliminados">
+        <h4>↩️ Historial de posiciones quitadas (Hacé clic para restaurar)</h4>
+        <div class="table-container" style="max-height: 180px; margin-bottom: 0;">
+            <table style="background: white;">
+                <thead>
+                    <tr style="background-color: #fef3c7;">
+                        <th>Doc. Ventas</th>
+                        <th>Descripción Material</th>
+                        <th style="width: 100px; text-align: center;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="listaEliminadosCuerpo"></tbody>
+            </table>
+        </div>
+    </div>
+
     <div id="workspace" style="display: none;">
         <div class="panel-control">
-            <span style="font-size: 13px; color: #64748b;" id="infoFilas"></span>
-            <span style="font-size: 12px; color: #b91c1c; font-weight: 500;">💡 Podés cambiar las cantidades directamente en la casilla.</span>
+            <div>
+                <span style="font-size: 13px; color: #64748b;" id="infoFilas"></span><br>
+                <span style="font-size: 12px; color: #1e3a8a; font-weight: 500;">✏️ Podés cargar el número de Aviso QM e indicar las cantidades finales antes de copiar.</span>
+            </div>
+            <div>
+                <button id="btnAbrirPapelera" class="btn btn-warning" onclick="togglePanelPapelera()" style="display: none;">
+                    ↩️ Ver Eliminados (<span id="contadorEliminados">0</span>)
+                </button>
+            </div>
         </div>
 
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 130px;">Aviso QM (SAP)</th>
                         <th>Doc. Ventas</th>
                         <th>Ref. Cliente</th>
                         <th>Solicitante</th>
@@ -174,8 +241,7 @@
                         <th style="text-align: center; width: 80px;">Acción</th>
                     </tr>
                 </thead>
-                <tbody id="tablaCuerpo">
-                    </tbody>
+                <tbody id="tablaCuerpo"></tbody>
             </table>
         </div>
 
@@ -194,10 +260,16 @@
 
 <script>
     let datosFiltrados = [];
+    let datosEliminados = [];
+    
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const workspace = document.getElementById('workspace');
     const tablaCuerpo = document.getElementById('tablaCuerpo');
+    const panelEliminados = document.getElementById('panelEliminados');
+    const listaEliminadosCuerpo = document.getElementById('listaEliminadosCuerpo');
+    const btnAbrirPapelera = document.getElementById('btnAbrirPapelera');
+    const contadorEliminados = document.getElementById('contadorEliminados');
 
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#dbeafe'; });
@@ -224,32 +296,39 @@
                 return;
             }
 
-            // Mapeamos buscando los nombres exactos de columnas de la VA05 estándar
             datosFiltrados = json.map((fila, index) => {
                 return {
                     idInterno: index,
+                    avisoQm: "", // Campo nuevo que arranca vacío para el usuario
                     docVentas: fila["Documento de ventas"] || "",
                     refCliente: fila["Referencia de cliente"] || "",
                     solicitante: fila["Nombre del solicitante"] || "",
                     material: fila["Descripción del material"] || "",
                     cantidad: parseInt(fila["Cantidad de pedido (Posición)"] || fila["Cantidad de pedido"]) || 1
                 };
-            }).filter(f => f.material !== ""); // Filtramos si hay filas vacías
+            }).filter(f => f.material !== "");
 
+            datosEliminados = [];
+            panelEliminados.style.display = 'none';
             workspace.style.display = 'block';
             dropZone.innerText = `🟢 Archivo cargado: ${file.name}`;
             renderizarTabla();
+            actualizarPapeleraUI();
         };
         reader.readAsArrayBuffer(file);
     }
 
     function renderizarTabla() {
         tablaCuerpo.innerHTML = '';
-        document.getElementById('infoFilas').innerText = `Mostrando ${datosFiltrados.length} posiciones encontradas.`;
+        document.getElementById('infoFilas').innerText = `Mostrando ${datosFiltrados.length} posiciones activas.`;
 
         datosFiltrados.forEach((fila, idx) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
+                <td>
+                    <input type="text" class="input-text-table" placeholder="N° Aviso" 
+                           value="${fila.avisoQm}" onchange="actualizarAvisoQm(${idx}, this.value)">
+                </td>
                 <td>${fila.docVentas}</td>
                 <td>${fila.refCliente}</td>
                 <td>${fila.solicitante}</td>
@@ -266,6 +345,10 @@
         });
     }
 
+    function actualizarAvisoQm(index, valor) {
+        datosFiltrados[index].avisoQm = valor.trim();
+    }
+
     function actualizarCantidad(index, valor) {
         let cant = parseInt(valor);
         if(isNaN(cant) || cant < 1) cant = 1;
@@ -273,8 +356,46 @@
     }
 
     function eliminarFila(index) {
+        datosEliminados.push(datosFiltrados[index]);
         datosFiltrados.splice(index, 1);
         renderizarTabla();
+        actualizarPapeleraUI();
+    }
+
+    function actualizarPapeleraUI() {
+        listaEliminadosCuerpo.innerHTML = '';
+        contadorEliminados.innerText = datosEliminados.length;
+
+        if (datosEliminados.length > 0) {
+            btnAbrirPapelera.style.display = 'inline-flex';
+            
+            datosEliminados.forEach((fila, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${fila.docVentas}</td>
+                    <td><span style="color: #64748b; text-decoration: line-through;">${fila.material}</span></td>
+                    <td style="text-align: center;">
+                        <button class="btn-mini-recuperar" onclick="recuperarFila(${idx})">↩️ Restaurar</button>
+                    </td>
+                `;
+                listaEliminadosCuerpo.appendChild(tr);
+            });
+        } else {
+            btnAbrirPapelera.style.display = 'none';
+            panelEliminados.style.display = 'none';
+        }
+    }
+
+    function recuperarFila(index) {
+        datosFiltrados.push(datosEliminados[index]);
+        datosEliminados.splice(index, 1);
+        datosFiltrados.sort((a, b) => a.idInterno - b.idInterno);
+        renderizarTabla();
+        actualizarPapeleraUI();
+    }
+
+    function togglePanelPapelera() {
+        panelEliminados.style.display = (panelEliminados.style.display === 'block') ? 'none' : 'block';
     }
 
     function copiarContenidoMail() {
@@ -284,17 +405,16 @@
         }
 
         const particularidades = document.getElementById('txtParticularidades').value.trim();
-        const infoGeneral = datosFiltrados[0]; // Para sacar datos del cliente generales
 
-        // Construcción del HTML con estilos en línea (Crucial para que Outlook y Gmail mantengan el diseño)
         let htmlMail = `
-            <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; margin: 0; padding: 10px; color: #333333; max-width: 800px;">
+            <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; margin: 0; padding: 10px; color: #333333; max-width: 900px;">
                 <p style="font-size: 15px; margin-bottom: 15px;">Hola Back Office,</p>
-                <p style="font-size: 14px; margin-bottom: 20px;">Solicito la siguiente reposición/carga en base al reporte adjunto:</p>
+                <p style="font-size: 14px; margin-bottom: 20px;">Solicito la siguiente reposición/carga en base al reporte de aviso adjunto:</p>
                 
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; border: 1px solid #cbd5e1;">
                     <thead>
                         <tr style="background-color: #1e3a8a; color: #ffffff; text-align: left;">
+                            <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Aviso QM</th>
                             <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Doc. Ventas</th>
                             <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Ref. Cliente</th>
                             <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Solicitante</th>
@@ -307,8 +427,11 @@
 
         datosFiltrados.forEach((f, index) => {
             let bgColor = (index % 2 === 0) ? '#ffffff' : '#f8fafc';
+            let avisoMostrar = f.avisoQm ? f.avisoQm : '<span style="color: #94a3b8; font-style: italic;">No aplica</span>';
+            
             htmlMail += `
                 <tr style="background-color: ${bgColor};">
+                    <td style="padding: 9px 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309;">${avisoMostrar}</td>
                     <td style="padding: 9px 10px; border: 1px solid #cbd5e1; color: #475569;">${f.docVentas}</td>
                     <td style="padding: 9px 10px; border: 1px solid #cbd5e1; color: #475569;">${f.refCliente}</td>
                     <td style="padding: 9px 10px; border: 1px solid #cbd5e1; color: #475569;">${f.solicitante}</td>
@@ -323,7 +446,6 @@
                 </table>
         `;
 
-        // Si el usuario ingresó aclaraciones, se añade un cuadro destacado
         if(particularidades !== "") {
             htmlMail += `
                 <div style="background-color: #fff7ed; border-left: 4px solid #f97316; padding: 12px; border-radius: 4px; margin-top: 20px; margin-bottom: 20px;">
@@ -338,21 +460,19 @@
             </div>
         `;
 
-        // Volcado al elemento oculto para seleccionarlo como HTML enriquecido
         const contenedorOculto = document.getElementById('htmlMailTemplate');
         contenedorOculto.innerHTML = htmlMail;
 
-        // API de portapapeles moderna para copiar texto con formato HTML
         const blob = new Blob([htmlMail], { type: 'text/html' });
         const clipboardItem = new ClipboardItem({ 'text/html': blob });
         
         navigator.clipboard.write([clipboardItem]).then(() => {
             const toast = document.getElementById('toast');
             toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
         }).catch(err => {
-            console.error('Error al copiar: ', err);
-            alert('Ocurrió un error al copiar el cuadro. Intentá nuevamente.');
+            console.error(err);
+            alert('Error al copiar automáticamente.');
         });
     }
 </script>
