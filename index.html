@@ -1,268 +1,209 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Pedidos y Reposiciones - VA05</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #f4f6f9;
-            color: #333;
-        }
-        .container {
-            max-width: 1200px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-        }
-        h2 {
-            color: #1e3a8a;
-            margin-top: 0;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
-            font-size: 22px;
-        }
-        .drop-zone {
-            border: 2px dashed #3b82f6;
-            padding: 25px;
-            text-align: center;
-            background: #eff6ff;
-            cursor: pointer;
-            border-radius: 6px;
-            font-size: 14px;
-            color: #1d4ed8;
-            font-weight: 500;
-            margin-bottom: 20px;
-            transition: background 0.2s;
-        }
-        .drop-zone:hover { background: #dbeafe; }
-        
-        .panel-control {
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente de Envío a Back Office · VA05 + QM</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style>
+    body { font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-        /* Tabla de edición en la aplicación */
-        .table-container {
-            overflow-x: auto;
-            max-height: 400px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        th, td {
-            padding: 10px 12px;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        th {
-            background-color: #f8fafc;
-            color: #334155;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            box-shadow: inset 0 -1px 0 #cbd5e1;
-        }
-        tr:hover { background-color: #f1f5f9; }
-        
-        .input-text-table {
-            width: 100%;
-            padding: 4px 6px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 12px;
-        }
-        .input-cantidad {
-            width: 60px;
-            padding: 4px 6px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .btn {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-        }
-        .btn:hover { background-color: #1d4ed8; }
-        .btn-danger { background-color: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 11px;}
-        .btn-danger:hover { background-color: #dc2626; }
-        .btn-success { background-color: #10b981; font-size: 14px; padding: 10px 20px;}
-        .btn-success:hover { background-color: #059669; }
-        
-        .btn-warning { 
-            background-color: #f59e0b; 
-            color: white;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-warning:hover { background-color: #d97706; }
-        
-        .btn-mini-recuperar {
-            background-color: #10b981;
-            color: white;
-            border: none;
-            padding: 2px 6px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-        }
-        .btn-mini-recuperar:hover { background-color: #059669; }
+    /* Scroll fino para la tabla */
+    .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+    .table-scroll::-webkit-scrollbar-track { background: transparent; }
+    .table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    .table-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Panel de la papelera */
-        .panel-eliminados {
-            background: #fffbeb;
-            border: 1px solid #fef3c7;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        .panel-eliminados h4 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #b45309;
-            font-size: 14px;
-        }
-
-        .particularidades-section {
-            margin-top: 15px;
-            margin-bottom: 20px;
-        }
-        .particularidades-section label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #475569;
-            font-size: 14px;
-        }
-        .particularidades-section textarea {
-            width: 100%;
-            height: 80px;
-            padding: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-family: inherit;
-            resize: vertical;
-            box-sizing: border-box;
-            font-size: 13px;
-        }
-
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #10b981;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 500;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: none;
-            z-index: 1000;
-        }
-    </style>
+    /* Inputs "limpios" dentro de la tabla */
+    .cell-input {
+        width: 100%;
+        border: 1px solid transparent;
+        background-color: #f1f5f9;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 12.5px;
+        color: #1e293b;
+        transition: background-color .15s ease, box-shadow .15s ease;
+    }
+    .cell-input:hover { background-color: #e2e8f0; }
+    .cell-input:focus {
+        outline: none;
+        background-color: #ffffff;
+        box-shadow: 0 0 0 2px rgba(99,102,241,0.55);
+    }
+    .cell-cantidad { text-align: center; font-weight: 700; }
+</style>
 </head>
-<body>
+<body class="min-h-screen bg-slate-100 text-slate-800">
 
-<div class="toast" id="toast">¡Copiado con éxito! Ya podés pegarlo en tu mail.</div>
+<!-- TOAST -->
+<div id="toast"
+     class="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-5 py-3.5 shadow-lg shadow-emerald-900/20
+            opacity-0 translate-y-3 pointer-events-none transition-all duration-300 ease-out">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+    </svg>
+    <span class="text-sm font-medium">¡Copiado con éxito! Ya podés pegarlo en tu mail.</span>
+</div>
 
-<div class="container">
-    <h2>Asistente de Envío a Back Office (Filtro VA05 + QM)</h2>
-    
-    <div id="dropZone" class="drop-zone">
-        Arrastrá acá el reporte Excel de la VA05 o hacé clic para buscarlo.
-        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display:none">
-    </div>
+<div class="max-w-6xl mx-auto px-4 py-8 md:py-12">
 
-    <div id="panelEliminados" class="panel-eliminados">
-        <h4>↩️ Historial de posiciones quitadas (Hacé clic para restaurar)</h4>
-        <div class="table-container" style="max-height: 180px; margin-bottom: 0;">
-            <table style="background: white;">
-                <thead>
-                    <tr style="background-color: #fef3c7;">
-                        <th>Doc. Ventas</th>
-                        <th>Descripción Material</th>
-                        <th style="width: 100px; text-align: center;">Acción</th>
-                    </tr>
-                </thead>
-                <tbody id="listaEliminadosCuerpo"></tbody>
-            </table>
+    <!-- HEADER -->
+    <div class="mb-6">
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-600/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M2 4.75A2.75 2.75 0 014.75 2h10.5A2.75 2.75 0 0118 4.75v10.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25V4.75zm3 1.5a.75.75 0 000 1.5h10a.75.75 0 000-1.5H5zm0 3.5a.75.75 0 000 1.5h10a.75.75 0 000-1.5H5zm0 3.5a.75.75 0 000 1.5h6a.75.75 0 000-1.5H5z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold text-slate-900">Asistente de Envío a Back Office</h1>
+                <p class="text-sm text-slate-500">Filtro VA05 + QM</p>
+            </div>
         </div>
     </div>
 
-    <div id="workspace" style="display: none;">
-        <div class="panel-control">
-            <div>
-                <span style="font-size: 13px; color: #64748b;" id="infoFilas"></span><br>
-                <span style="font-size: 12px; color: #1e3a8a; font-weight: 500;">✏️ Podés cargar el número de Aviso QM e indicar las cantidades finales antes de copiar.</span>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 md:p-8">
+
+        <!-- DROP ZONE -->
+        <div id="dropZone"
+             class="group relative rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/60 hover:bg-indigo-50 hover:border-indigo-400
+                    transition-colors duration-200 cursor-pointer px-6 py-10 text-center mb-6">
+            <div class="mx-auto mb-3 h-12 w-12 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M9.25 13.25a.75.75 0 001.5 0V4.636l2.955 3.129a.75.75 0 001.09-1.03l-4.25-4.5a.75.75 0 00-1.09 0l-4.25 4.5a.75.75 0 101.09 1.03L9.25 4.636v8.614z" />
+                    <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                </svg>
             </div>
-            <div>
-                <button id="btnAbrirPapelera" class="btn btn-warning" onclick="togglePanelPapelera()" style="display: none;">
-                    ↩️ Ver Eliminados (<span id="contadorEliminados">0</span>)
+            <p id="dropZoneText" class="text-sm font-semibold text-indigo-700">
+                Arrastrá acá el reporte Excel de la VA05
+            </p>
+            <p class="text-xs text-indigo-500 mt-1">o hacé clic para buscarlo en tu equipo · .xlsx, .xls, .csv</p>
+            <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
+        </div>
+
+        <!-- PAPELERA -->
+        <div id="panelEliminados" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-4 mb-6">
+            <h4 class="text-sm font-semibold text-amber-700 mb-3 flex items-center gap-1.5">
+                <span>↩️</span> Historial de posiciones quitadas — hacé clic para restaurar
+            </h4>
+            <div class="table-scroll overflow-auto rounded-lg border border-amber-200 bg-white" style="max-height: 180px;">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-amber-100 text-amber-800">
+                        <tr>
+                            <th class="text-left font-semibold px-3 py-2">Doc. Ventas</th>
+                            <th class="text-left font-semibold px-3 py-2">Descripción Material</th>
+                            <th class="text-center font-semibold px-3 py-2 w-28">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaEliminadosCuerpo"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- WORKSPACE -->
+        <div id="workspace" class="hidden">
+
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 flex items-center gap-3">
+                    <div class="h-9 w-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 2A1.5 1.5 0 004 3.5v13A1.5 1.5 0 005.5 18h9a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0010.378 2H5.5z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Items activos</p>
+                        <p id="kpiItems" class="text-lg font-bold text-slate-900">0</p>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 flex items-center gap-3">
+                    <div class="h-9 w-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM13 10a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Unidades totales</p>
+                        <p id="kpiCantidad" class="text-lg font-bold text-slate-900">0</p>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 flex items-center gap-3">
+                    <div class="h-9 w-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Items en papelera</p>
+                        <p id="kpiPapelera" class="text-lg font-bold text-slate-900">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTROL PANEL -->
+            <div class="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+                <div class="relative flex-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                    </svg>
+                    <input type="text" id="inputBusqueda" oninput="filtrarTabla(this.value)"
+                           placeholder="Buscar por material, solicitante o doc. de ventas..."
+                           class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition">
+                </div>
+                <button id="btnAbrirPapelera" onclick="togglePanelPapelera()"
+                        class="hidden items-center justify-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2.5 transition-colors shadow-sm">
+                    ↩️ Ver eliminados (<span id="contadorEliminados">0</span>)
                 </button>
             </div>
-        </div>
+            <p id="infoFilas" class="text-xs text-slate-500 mb-1"></p>
+            <p class="text-xs text-indigo-700 font-medium mb-4">✏️ Podés cargar el número de Aviso QM e indicar las cantidades finales antes de copiar.</p>
 
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 130px;">Aviso QM (SAP)</th>
-                        <th>Doc. Ventas</th>
-                        <th>Ref. Cliente</th>
-                        <th>Solicitante</th>
-                        <th>Descripción Material</th>
-                        <th style="text-align: center; width: 90px;">Cantidad</th>
-                        <th style="text-align: center; width: 80px;">Acción</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaCuerpo"></tbody>
-            </table>
-        </div>
+            <!-- TABLA -->
+            <div class="table-scroll overflow-auto rounded-xl border border-slate-200 mb-6" style="max-height: 420px;">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="sticky top-0 z-10 bg-slate-50 text-slate-600 shadow-[inset_0_-1px_0_#e2e8f0]">
+                        <tr>
+                            <th class="text-left font-semibold px-3 py-3 w-36">Aviso QM (SAP)</th>
+                            <th class="text-left font-semibold px-3 py-3">Doc. Ventas</th>
+                            <th class="text-left font-semibold px-3 py-3">Ref. Cliente</th>
+                            <th class="text-left font-semibold px-3 py-3">Solicitante</th>
+                            <th class="text-left font-semibold px-3 py-3">Descripción Material</th>
+                            <th class="text-center font-semibold px-3 py-3 w-24">Cantidad</th>
+                            <th class="text-center font-semibold px-3 py-3 w-20">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCuerpo"></tbody>
+                </table>
+            </div>
 
-        <div class="particularidades-section">
-            <label for="txtParticularidades">📝 Particularidades / Notas para Back Office:</label>
-            <textarea id="txtParticularidades" placeholder="Escribí acá aclaraciones sobre la entrega, transporte, urgencias, etc..."></textarea>
-        </div>
+            <!-- PARTICULARIDADES -->
+            <div class="mb-6">
+                <label for="txtParticularidades" class="block text-sm font-semibold text-slate-700 mb-2">
+                    📝 Particularidades / Notas para Back Office
+                </label>
+                <textarea id="txtParticularidades" rows="3"
+                          placeholder="Escribí acá aclaraciones sobre la entrega, transporte, urgencias, etc..."
+                          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm resize-y
+                                 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition"></textarea>
+            </div>
 
-        <div style="text-align: right;">
-            <button class="btn btn-success" onclick="copiarContenidoMail()">📋 Copiar Estructura para el Mail</button>
+            <div class="text-right">
+                <button onclick="copiarContenidoMail()"
+                        class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98]
+                               text-white font-semibold px-6 py-3 text-sm shadow-sm hover:shadow-md transition-all">
+                    📋 Copiar Estructura para el Mail
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="htmlMailTemplate" style="display: none;"></div>
+<div id="htmlMailTemplate" class="hidden"></div>
 
 <script>
     let datosFiltrados = [];
     let datosEliminados = [];
-    
+    let terminoBusqueda = '';
+
     const dropZone = document.getElementById('dropZone');
+    const dropZoneText = document.getElementById('dropZoneText');
     const fileInput = document.getElementById('fileInput');
     const workspace = document.getElementById('workspace');
     const tablaCuerpo = document.getElementById('tablaCuerpo');
@@ -272,11 +213,16 @@
     const contadorEliminados = document.getElementById('contadorEliminados');
 
     dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#dbeafe'; });
-    dropZone.addEventListener('dragleave', () => dropZone.style.background = '#eff6ff');
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('bg-indigo-100', 'border-indigo-500');
+    });
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('bg-indigo-100', 'border-indigo-500');
+    });
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        dropZone.style.background = '#eff6ff';
+        dropZone.classList.remove('bg-indigo-100', 'border-indigo-500');
         if (e.dataTransfer.files.length > 0) procesarExcel(e.dataTransfer.files[0]);
     });
     fileInput.addEventListener('change', (e) => {
@@ -299,7 +245,7 @@
             datosFiltrados = json.map((fila, index) => {
                 return {
                     idInterno: index,
-                    avisoQm: "", // Campo nuevo que arranca vacío para el usuario
+                    avisoQm: "", 
                     docVentas: fila["Documento de ventas"] || "",
                     refCliente: fila["Referencia de cliente"] || "",
                     solicitante: fila["Nombre del solicitante"] || "",
@@ -309,40 +255,87 @@
             }).filter(f => f.material !== "");
 
             datosEliminados = [];
-            panelEliminados.style.display = 'none';
-            workspace.style.display = 'block';
-            dropZone.innerText = `🟢 Archivo cargado: ${file.name}`;
+            terminoBusqueda = '';
+            document.getElementById('inputBusqueda').value = '';
+            panelEliminados.classList.add('hidden');
+            workspace.classList.remove('hidden');
+            dropZoneText.innerText = `🟢 Archivo cargado: ${file.name}`;
             renderizarTabla();
             actualizarPapeleraUI();
         };
         reader.readAsArrayBuffer(file);
     }
 
+    function filtrarTabla(valor) {
+        terminoBusqueda = valor || '';
+        renderizarTabla();
+    }
+
     function renderizarTabla() {
         tablaCuerpo.innerHTML = '';
-        document.getElementById('infoFilas').innerText = `Mostrando ${datosFiltrados.length} posiciones activas.`;
+        const filtro = terminoBusqueda.trim().toLowerCase();
 
-        datosFiltrados.forEach((fila, idx) => {
+        const filasVisibles = datosFiltrados
+            .map((fila, idx) => ({ fila, idx }))
+            .filter(({ fila }) => {
+                if (!filtro) return true;
+                return (fila.material || '').toLowerCase().includes(filtro) ||
+                       (fila.solicitante || '').toLowerCase().includes(filtro) ||
+                       String(fila.docVentas || '').toLowerCase().includes(filtro);
+            });
+
+        if (filtro) {
+            document.getElementById('infoFilas').innerText =
+                `Mostrando ${filasVisibles.length} de ${datosFiltrados.length} posiciones activas (filtradas).`;
+        } else {
+            document.getElementById('infoFilas').innerText =
+                `Mostrando ${datosFiltrados.length} posiciones activas.`;
+        }
+
+        if (filasVisibles.length === 0) {
+            tablaCuerpo.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-slate-400 text-sm py-8">
+                        No se encontraron posiciones que coincidan con la búsqueda.
+                    </td>
+                </tr>`;
+        }
+
+        filasVisibles.forEach(({ fila, idx }) => {
             const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition-colors';
             tr.innerHTML = `
-                <td>
-                    <input type="text" class="input-text-table" placeholder="N° Aviso" 
+                <td class="px-3 py-2">
+                    <input type="text" class="cell-input" placeholder="N° Aviso"
                            value="${fila.avisoQm}" onchange="actualizarAvisoQm(${idx}, this.value)">
                 </td>
-                <td>${fila.docVentas}</td>
-                <td>${fila.refCliente}</td>
-                <td>${fila.solicitante}</td>
-                <td><strong>${fila.material}</strong></td>
-                <td style="text-align: center;">
-                    <input type="number" class="input-cantidad" value="${fila.cantidad}" min="1" 
+                <td class="px-3 py-2 text-slate-600">${fila.docVentas}</td>
+                <td class="px-3 py-2 text-slate-600">${fila.refCliente}</td>
+                <td class="px-3 py-2 text-slate-600">${fila.solicitante}</td>
+                <td class="px-3 py-2 font-semibold text-slate-800">${fila.material}</td>
+                <td class="px-3 py-2 text-center">
+                    <input type="number" class="cell-input cell-cantidad" value="${fila.cantidad}" min="1"
                            onchange="actualizarCantidad(${idx}, this.value)">
                 </td>
-                <td style="text-align: center;">
-                    <button class="btn btn-danger" onclick="eliminarFila(${idx})">Eliminar</button>
+                <td class="px-3 py-2 text-center">
+                    <button onclick="eliminarFila(${idx})"
+                            class="rounded-lg bg-red-50 text-red-600 hover:bg-red-500 hover:text-white text-xs font-semibold px-2.5 py-1.5 transition-colors">
+                        Eliminar
+                    </button>
                 </td>
             `;
             tablaCuerpo.appendChild(tr);
         });
+
+        actualizarKPIs();
+    }
+
+    function actualizarKPIs() {
+        const totalItems = datosFiltrados.length;
+        const totalCantidad = datosFiltrados.reduce((acc, f) => acc + (parseInt(f.cantidad) || 0), 0);
+        document.getElementById('kpiItems').innerText = totalItems;
+        document.getElementById('kpiCantidad').innerText = totalCantidad;
+        document.getElementById('kpiPapelera').innerText = datosEliminados.length;
     }
 
     function actualizarAvisoQm(index, valor) {
@@ -353,6 +346,7 @@
         let cant = parseInt(valor);
         if(isNaN(cant) || cant < 1) cant = 1;
         datosFiltrados[index].cantidad = cant;
+        actualizarKPIs();
     }
 
     function eliminarFila(index) {
@@ -367,23 +361,30 @@
         contadorEliminados.innerText = datosEliminados.length;
 
         if (datosEliminados.length > 0) {
-            btnAbrirPapelera.style.display = 'inline-flex';
-            
+            btnAbrirPapelera.classList.remove('hidden');
+            btnAbrirPapelera.classList.add('inline-flex');
+
             datosEliminados.forEach((fila, idx) => {
                 const tr = document.createElement('tr');
+                tr.className = 'border-b border-amber-100 last:border-b-0';
                 tr.innerHTML = `
-                    <td>${fila.docVentas}</td>
-                    <td><span style="color: #64748b; text-decoration: line-through;">${fila.material}</span></td>
-                    <td style="text-align: center;">
-                        <button class="btn-mini-recuperar" onclick="recuperarFila(${idx})">↩️ Restaurar</button>
+                    <td class="px-3 py-2 text-slate-600">${fila.docVentas}</td>
+                    <td class="px-3 py-2"><span class="text-slate-400 line-through">${fila.material}</span></td>
+                    <td class="px-3 py-2 text-center">
+                        <button onclick="recuperarFila(${idx})"
+                                class="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-2.5 py-1.5 transition-colors">
+                            ↩️ Restaurar
+                        </button>
                     </td>
                 `;
                 listaEliminadosCuerpo.appendChild(tr);
             });
         } else {
-            btnAbrirPapelera.style.display = 'none';
-            panelEliminados.style.display = 'none';
+            btnAbrirPapelera.classList.add('hidden');
+            btnAbrirPapelera.classList.remove('inline-flex');
+            panelEliminados.classList.add('hidden');
         }
+        actualizarKPIs();
     }
 
     function recuperarFila(index) {
@@ -395,7 +396,17 @@
     }
 
     function togglePanelPapelera() {
-        panelEliminados.style.display = (panelEliminados.style.display === 'block') ? 'none' : 'block';
+        panelEliminados.classList.toggle('hidden');
+    }
+
+    function mostrarToast() {
+        const toast = document.getElementById('toast');
+        toast.classList.remove('opacity-0', 'translate-y-3', 'pointer-events-none');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
+            toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 2500);
     }
 
     function copiarContenidoMail() {
@@ -405,38 +416,55 @@
         }
 
         const particularidades = document.getElementById('txtParticularidades').value.trim();
+        const filtro = terminoBusqueda.trim().toLowerCase();
 
+        let datosParaCopiar = datosFiltrados;
+        if (filtro) {
+            datosParaCopiar = datosFiltrados.filter(fila => {
+                return (fila.material || '').toLowerCase().includes(filtro) ||
+                       (fila.solicitante || '').toLowerCase().includes(filtro) ||
+                       String(fila.docVentas || '').toLowerCase().includes(filtro);
+            });
+        }
+
+        if (datosParaCopiar.length === 0) {
+            alert("No hay elementos visibles bajo este filtro para copiar.");
+            return;
+        }
+
+        // PARSEO ESTRUCTURAL INMUNE A OUTLOOK/GMAIL: <br> explícitos y sin márgenes colapsables
         let htmlMail = `
-            <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; margin: 0; padding: 10px; color: #333333; max-width: 900px;">
-                <p style="font-size: 15px; margin-bottom: 15px;">Hola Back Office,</p>
-                <p style="font-size: 14px; margin-bottom: 20px;">Solicito la siguiente reposición/carga en base al reporte de aviso adjunto:</p>
-                
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; border: 1px solid #cbd5e1;">
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #1e293b; max-width: 850px; margin: 0; padding: 0;">
+                <p style="margin: 0; padding: 0;">Hola Back Office,</p>
+                <br>
+                <p style="margin: 0; padding: 0;">Solicito la siguiente reposición/carga en base al reporte de aviso adjunto:</p>
+                <br>
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin: 0; border: 1px solid #cbd5e1;">
                     <thead>
                         <tr style="background-color: #1e3a8a; color: #ffffff; text-align: left;">
-                            <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Aviso QM</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Doc. Ventas</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Ref. Cliente</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Solicitante</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600;">Descripción Material</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1; font-weight: 600; text-align: center; width: 70px;">Cant.</th>
+                            <th style="padding: 12px 14px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 13px; letter-spacing: 0.5px;">Aviso QM</th>
+                            <th style="padding: 12px 14px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 13px; letter-spacing: 0.5px;">Doc. Ventas</th>
+                            <th style="padding: 12px 14px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 13px; letter-spacing: 0.5px;">Ref. Cliente</th>
+                            <th style="padding: 12px 14px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 13px; letter-spacing: 0.5px;">Solicitante</th>
+                            <th style="padding: 12px 14px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 13px; letter-spacing: 0.5px;">Descripción Material</th>
+                            <th style="padding: 12px 14px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 13px; letter-spacing: 0.5px; text-align: center; width: 65px;">Cant.</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
 
-        datosFiltrados.forEach((f, index) => {
+        datosParaCopiar.forEach((f, index) => {
             let bgColor = (index % 2 === 0) ? '#ffffff' : '#f8fafc';
             let avisoMostrar = f.avisoQm ? f.avisoQm : '<span style="color: #94a3b8; font-style: italic;">No aplica</span>';
             
             htmlMail += `
                 <tr style="background-color: ${bgColor};">
-                    <td style="padding: 9px 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309;">${avisoMostrar}</td>
-                    <td style="padding: 9px 10px; border: 1px solid #cbd5e1; color: #475569;">${f.docVentas}</td>
-                    <td style="padding: 9px 10px; border: 1px solid #cbd5e1; color: #475569;">${f.refCliente}</td>
-                    <td style="padding: 9px 10px; border: 1px solid #cbd5e1; color: #475569;">${f.solicitante}</td>
-                    <td style="padding: 9px 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #1e293b;">${f.material}</td>
-                    <td style="padding: 9px 10px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #2563eb; font-size: 14px;">${f.cantidad}</td>
+                    <td style="padding: 11px 14px; border: 1px solid #e2e8f0; font-weight: bold; color: #b45309;">${avisoMostrar}</td>
+                    <td style="padding: 11px 14px; border: 1px solid #e2e8f0; color: #475569;">${f.docVentas}</td>
+                    <td style="padding: 11px 14px; border: 1px solid #e2e8f0; color: #475569;">${f.refCliente}</td>
+                    <td style="padding: 11px 14px; border: 1px solid #e2e8f0; color: #475569;">${f.solicitante}</td>
+                    <td style="padding: 11px 14px; border: 1px solid #e2e8f0; font-weight: 600; color: #0f172a;">${f.material}</td>
+                    <td style="padding: 11px 14px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: #1e3a8a; font-size: 14px;">${f.cantidad}</td>
                 </tr>
             `;
         });
@@ -444,19 +472,21 @@
         htmlMail += `
                     </tbody>
                 </table>
+                <br>
         `;
 
         if(particularidades !== "") {
             htmlMail += `
-                <div style="background-color: #fff7ed; border-left: 4px solid #f97316; padding: 12px; border-radius: 4px; margin-top: 20px; margin-bottom: 20px;">
-                    <strong style="color: #c2410c; display: block; margin-bottom: 5px; font-size: 14px;">⚠️ Particularidades / Observaciones importantes:</strong>
-                    <p style="margin: 0; font-size: 13px; color: #431407; white-space: pre-wrap;">${particularidades}</p>
+                <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 14px 16px; border-radius: 4px; margin: 0;">
+                    <strong style="color: #1e3a8a; display: block; margin-bottom: 6px; font-size: 14px;">⚠️ Particularidades / Observaciones importantes:</strong>
+                    <p style="margin: 0; padding: 0; font-size: 13.5px; color: #334155; white-space: pre-wrap; line-height: 1.5;">${particularidades}</p>
                 </div>
+                <br>
             `;
         }
 
         htmlMail += `
-                <p style="font-size: 14px; margin-top: 20px;">Quedo a la espera de la confirmación. ¡Muchas gracias!</p>
+                <p style="margin: 0; padding: 0; font-size: 14px;">Quedo a la espera de la confirmation. ¡Muchas gracias!</p>
             </div>
         `;
 
@@ -467,9 +497,7 @@
         const clipboardItem = new ClipboardItem({ 'text/html': blob });
         
         navigator.clipboard.write([clipboardItem]).then(() => {
-            const toast = document.getElementById('toast');
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+            mostrarToast();
         }).catch(err => {
             console.error(err);
             alert('Error al copiar automáticamente.');
